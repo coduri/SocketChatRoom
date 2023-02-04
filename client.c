@@ -1,3 +1,4 @@
+// Created by Christian Coduri on 26/09/22.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,16 +8,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include "messagePrinting.h"
 
 #define MAXLEN 1000
 #define  PORT 3334
-
-// Definsco colori per "abbellire" output
-    #define COLOR_RED     "\x1b[31m"
-    #define COLOR_GREEN   "\x1b[32m"
-    #define COLOR_CYAN    "\x1b[36m"
-    #define COLOR_RESET   "\x1b[0m"
-
 
 
 void send_handler(int*);
@@ -31,7 +26,7 @@ int main() {
 
     sd = socket(AF_INET, SOCK_STREAM, 0);
     if (sd < 0){
-        printf(COLOR_RED "Errore creazione socket!" COLOR_RESET);
+        printRed("Errore creazione socket!");
         return -1;
     }
 
@@ -40,7 +35,7 @@ int main() {
     server_add.sin_port = htons(PORT);
 
     if(connect(sd, (struct sockaddr*) &server_add, sizeof(server_add)) < 0){
-        printf(COLOR_RED "Errore connessione al server!" COLOR_RESET);
+        printRed( "Errore connessione al server!");
         return -1;
     }
 
@@ -49,19 +44,18 @@ int main() {
     scanf("%s", nome);
 
     send(sd, nome, 30, 0);
-    fflush(stdin);
  
-    printf(COLOR_GREEN "\n=== Ti sei unito alla chat ===\n" COLOR_RESET);
+    printGreen("\n=== Ti sei unito alla chat ===\n");
 
     // Creo thread per l'invio di messaggi
     if(pthread_create(&send_thread, NULL, (void *) send_handler, &sd) != 0){
-        printf("Errore creazione send-thread!");
+        printRed("Errore creazione send-thread!");
         return -1;
     }
 
     // Creo thread per la ricezione di messaggi
     if(pthread_create(&recv_thread, NULL, (void *) recv_handler, &sd) != 0){
-        printf("Errore creazione recv-thread!");
+        printRed("Errore creazione recv-thread!");
         return -1;
     }
 
@@ -80,14 +74,14 @@ void send_handler(int* pointer_sd) {
 
     while(1){
         printf(COLOR_RESET);
-        fgets(sendbuff, MAXLEN, stdin);
 
+        fgets(sendbuff, MAXLEN, stdin);
         send(sd, sendbuff, MAXLEN, 0);
     }
 }
 
 void recv_handler(int* pointer_sd) {
-    int sd = * pointer_sd;
+    int sd = *pointer_sd;
     char recvbuff[MAXLEN], nomeClient[30];
     int option;
 
@@ -103,24 +97,21 @@ void recv_handler(int* pointer_sd) {
             recv(sd, nomeClient, 30, 0);    // ricevo nome del mittente
             recv(sd, recvbuff, MAXLEN, 0);  // ricevo messaggio
 
-            printf(COLOR_CYAN);
-            printf("%s: ", nomeClient);
-            printf(COLOR_RESET);
-            printf("%s", recvbuff);
+            printMessage(nomeClient, recvbuff);
         }
 
         // Messaggio dal server: indica che c'è stato l'ingresso di un nuovo client nel gruppo
         else if(msgType == 2){
             recv(sd, nomeClient, 30, 0);  // ricevo nome del mittente
 
-            printf(COLOR_GREEN "=== %s si è unito alla chat ===" COLOR_RESET, nomeClient); printf(" \n");
+            printUserJoin(nomeClient);
         }
 
         // Messaggio dal server: indica che c'è stato l'uscita di un client dal gruppo
         else if(msgType == 3){
             recv(sd, nomeClient, 30, 0);  // ricevo nome del mittente
 
-            printf(COLOR_RED "=== %s ha abbandonato ===" COLOR_RESET, nomeClient); printf(" \n");
+            printUserLeft(nomeClient);
         }    
     }
 }

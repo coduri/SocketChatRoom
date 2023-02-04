@@ -1,3 +1,4 @@
+// Created by Christian Coduri on 26/09/22.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,16 +8,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include "messagePrinting.h"
 
 #define MAXLEN 1000
 #define PORT 3334
 #define LIMIT 10
-
-// Definsco colori per "abbellire" output
-    #define COLOR_RED     "\x1b[31m"
-    #define COLOR_GREEN   "\x1b[32m"
-    #define COLOR_RESET   "\x1b[0m"
-
 
 
 // Definizione della struttura che contiene i dati di un singolo client
@@ -76,11 +72,11 @@ int main() {
 
     sd = socket(AF_INET, SOCK_STREAM, 0);
     if (sd < 0){
-        printf(COLOR_RED "Errore creazione socket!" COLOR_RESET);
+        printRed("Errore creazione socket!");
         return -1;
     }
 
-    printf(COLOR_GREEN "OK: " COLOR_RESET); printf("socket()\n");
+    printGreen("OK: "); printf("socket()\n");
     
 
     server_add.sin_family = AF_INET;
@@ -89,19 +85,19 @@ int main() {
     
 
     if (bind(sd, (struct sockaddr *) &server_add, sizeof(server_add)) < 0){
-        printf(COLOR_RED "Errore bind()!" COLOR_RESET);
+        printRed("Errore bind()!");
         return -1;
     }
 
-    printf(COLOR_GREEN "OK: " COLOR_RESET); printf("bind()\n");
+    printGreen("OK: "); printf("bind()\n");
     
 
     if (listen(sd, LIMIT) < 0){
-        printf(COLOR_RED "Errore listen()!" COLOR_RESET);
+        printRed("Errore listen()!");
         return -1;
     }
 
-    printf(COLOR_GREEN "OK: " COLOR_RESET); printf("listen()\n\n");
+    printGreen("OK: "); printf("listen()\n\n");
 
 
     while (1) {
@@ -134,7 +130,7 @@ void handleClient(void* arg){
     recv(cli->sockfd, recvbuff, 30, 0);
     strcpy(cli->nome, recvbuff);
 
-    printf(COLOR_GREEN "=== %s si è unito alla chat ===\n" COLOR_RESET, cli->nome);     // visualizzo l'ingresso del nuovo client sul server
+    printUserJoin(cli->nome);     // visualizzo l'ingresso del nuovo client sul server
     forward(2, NULL, cli);                                                              // faccio visualizzare l'ingresso del nuovo client agli altri client
 
     while(1){
@@ -146,7 +142,7 @@ void handleClient(void* arg){
         }
 
         else if(bytercv <= 0){
-            printf(COLOR_RED "=== %s ha abbandonato ===\n" COLOR_RESET, cli->nome);     // visualizzo l'uscita del client sul server
+            printUserLeft(cli->nome);     // visualizzo l'uscita del client sul server
             forward(3, NULL, cli);                                                      // faccio visualizzare l'uscita del client agli altri client
             break;
         }
