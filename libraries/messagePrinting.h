@@ -7,6 +7,10 @@ void printMessage(char* name, char* msg){
     printf("\n");
 }
 
+void printSendingInterface(char* name){
+    printYellow(name);
+    printf(": ");
+}
 
 void printUserJoin(char* name){
     char formatString[100];

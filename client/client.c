@@ -18,6 +18,7 @@
 void send_handler(int *);
 void recv_handler(int *);
 
+char username[MAX_SENDER_NAME_LENGTH] = "";
 
 int main() {
     int sd;
@@ -40,6 +41,26 @@ int main() {
         return -1;
     }
 
+    // Acquisisco e invio nome utente
+    messageProtocol messageToSend;
+    messageToSend.typeMessage = MESSAGE_TYPE_JOIN;
+
+    // Acquisisco nome utente (mi assicuro non sia vuoto e che non abbia la newLine)
+    while(strcmp(username, "") == 0){
+        printf("Inserisci username utente: ");
+        fgets(username, MAX_SENDER_NAME_LENGTH, stdin);
+
+        // Rimuovo il "new line"
+        if ((strlen(username) > 0) && (username[strlen (username) - 1] == '\n'))
+            username[strlen (username) - 1] = '\0';
+    }
+
+    //Invio nome utente
+    strcpy(messageToSend.sender, username);
+    send(sd, &messageToSend, SIZE_OF_MESSAGE_PROTOCOL, 0);
+
+    printUserJoin(username);
+
     // Creo thread per l'invio di messaggi
     if (pthread_create(&send_thread, NULL, (void *) send_handler, &sd) != 0) {
         printErrorStatus("sender thread creation");
@@ -52,7 +73,7 @@ int main() {
         return -1;
     }
 
-    pthread_join(recv_thread, NULL);
+    pthread_join(recv_thread, NULL); // connessione col server persa
 
     return 0;
 }
@@ -60,26 +81,12 @@ int main() {
 
 void send_handler(int *sd_pointer) {
     int sd = *sd_pointer;
-    char username[MAX_SENDER_NAME_LENGTH];
 
     messageProtocol messageToSend;
-    messageToSend.typeMessage = MESSAGE_TYPE_JOIN;
-
-    // Acquisisco username utente
-    printf("Inserisci username utente: ");
-    fgets(username, MAX_SENDER_NAME_LENGTH, stdin);
-    // Rimuovo il "new line"
-    if ((strlen(username) > 0) && (username[strlen (username) - 1] == '\n'))
-        username[strlen (username) - 1] = '\0';
-
-    strcpy(messageToSend.sender, username);
-    send(sd, &messageToSend, SIZE_OF_MESSAGE_PROTOCOL, 0);
-
-    printUserJoin(username);
-
     messageToSend.typeMessage = MESSAGE_TYPE_SEND;
 
     while (1) {
+        printSendingInterface(username);
         fgets(messageToSend.message, MAX_MESSAGE_LENGTH, stdin);
         // Rimuovo il "new line"
         if ((strlen(messageToSend.message) > 0) && (messageToSend.message[strlen (messageToSend.message) - 1] == '\n'))
@@ -87,7 +94,7 @@ void send_handler(int *sd_pointer) {
 
         // Se messaggio inviato non è vuoto
         if(strcmp(messageToSend.message, "") != 0)
-            send(sd, &messageToSend, SIZE_OF_MESSAGE_PROTOCOL, 0);
+            send(sd, &messageToSend, SIZE_OF_MESSAGE_PROTOCOL, 0);             // invio al server il messaggio da inoltrare
 
     }
 }
@@ -98,6 +105,9 @@ void recv_handler(int *pointer_sd) {
 
     while (1) {
         ssize_t bytercv = recv(sd, &receivedMessage, SIZE_OF_MESSAGE_PROTOCOL, 0);
+
+        // Rimuovo linea di interfaccia tipo "nome-utente: ..."
+        clearInput();
 
         // Messaggio inviato da un client
         if (bytercv <= 0) {
@@ -120,5 +130,8 @@ void recv_handler(int *pointer_sd) {
         else if (receivedMessage.typeMessage == MESSAGE_TYPE_LEAVE) {
             printUserLeft(receivedMessage.sender);
         }
+
+        printSendingInterface(username);
+        fflush(stdout);
     }
 }

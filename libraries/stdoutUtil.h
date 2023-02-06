@@ -23,5 +23,5 @@ void printYellow(char *str) {
 }
 
 void clearInput() {
-    printf("\33[2KT\r");
+    printf("\33[2K\r");
 }
