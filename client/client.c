@@ -14,7 +14,6 @@
 
 #define  PORT 3334
 
-
 void send_handler(int *);
 void recv_handler(int *);
 
@@ -22,10 +21,10 @@ char username[MAX_SENDER_NAME_LENGTH] = "";
 
 int main() {
     int sd;
-
     struct sockaddr_in server_add;
     pthread_t send_thread, recv_thread;
 
+    // Creo e connetto la socket
     sd = socket(AF_INET, SOCK_STREAM, 0);
     if (sd < 0) {
         printErrorStatus("socket creation");
@@ -41,24 +40,24 @@ int main() {
         return -1;
     }
 
-    // Acquisisco e invio nome utente
-    messageProtocol messageToSend;
-    messageToSend.typeMessage = MESSAGE_TYPE_JOIN;
-
-    // Acquisisco nome utente (mi assicuro non sia vuoto e che non abbia la newLine)
-    while(strcmp(username, "") == 0){
+    // Acquisisco nome utente (mi assicuro che non sia vuoto e che non abbia la newLine)
+    while (strcmp(username, "") == 0) {
         printf("Inserisci username utente: ");
         fgets(username, MAX_SENDER_NAME_LENGTH, stdin);
 
-        // Rimuovo il "new line"
-        if ((strlen(username) > 0) && (username[strlen (username) - 1] == '\n'))
-            username[strlen (username) - 1] = '\0';
+        // Rimuovo il "new line" che fgets acquisisce
+        if ((strlen(username) > 0) && (username[strlen(username) - 1] == '\n'))
+            username[strlen(username) - 1] = '\0';
     }
 
-    //Invio nome utente
+    // Invio messaggio di JOIN per avvisare tutti gli altri client
+    messageProtocol messageToSend;
+    messageToSend.typeMessage = MESSAGE_TYPE_JOIN;
+
     strcpy(messageToSend.sender, username);
     send(sd, &messageToSend, SIZE_OF_MESSAGE_PROTOCOL, 0);
 
+    // Stampo sul nuovo client messaggio di join
     printUserJoin(username);
 
     // Creo thread per l'invio di messaggi
@@ -73,7 +72,12 @@ int main() {
         return -1;
     }
 
-    pthread_join(recv_thread, NULL); // connessione col server persa
+    // Resto in attesa del recv_thread, che ritorna solo in caso di connessione col server persa
+    pthread_join(recv_thread, NULL);
+
+    close(sd);
+    pthread_detach(send_thread);
+    pthread_detach(recv_thread);
 
     return 0;
 }
@@ -82,20 +86,23 @@ int main() {
 void send_handler(int *sd_pointer) {
     int sd = *sd_pointer;
 
+    // Configuro un template dei messaggi che verranno inviati
     messageProtocol messageToSend;
     messageToSend.typeMessage = MESSAGE_TYPE_SEND;
+    strcpy(messageToSend.sender, username);
 
     while (1) {
+        // Stampo un interfaccia del tipo "nome-utente: ..." e resto in attesa di input
         printSendingInterface(username);
         fgets(messageToSend.message, MAX_MESSAGE_LENGTH, stdin);
-        // Rimuovo il "new line"
-        if ((strlen(messageToSend.message) > 0) && (messageToSend.message[strlen (messageToSend.message) - 1] == '\n'))
-            messageToSend.message[strlen (messageToSend.message) - 1] = '\0';
 
-        // Se messaggio inviato non è vuoto
-        if(strcmp(messageToSend.message, "") != 0)
-            send(sd, &messageToSend, SIZE_OF_MESSAGE_PROTOCOL, 0);             // invio al server il messaggio da inoltrare
+        // Rimuovo il "new line" che acquisisce fgets
+        if ((strlen(messageToSend.message) > 0) && (messageToSend.message[strlen(messageToSend.message) - 1] == '\n'))
+            messageToSend.message[strlen(messageToSend.message) - 1] = '\0';
 
+        // Se messaggio non è vuoto lo inivio al server
+        if (strcmp(messageToSend.message, "") != 0)
+            send(sd, &messageToSend, SIZE_OF_MESSAGE_PROTOCOL, 0);
     }
 }
 
@@ -104,33 +111,27 @@ void recv_handler(int *pointer_sd) {
     messageProtocol receivedMessage;
 
     while (1) {
+        // Acquisisco nuovo messaggio in arrivo dal server e lo stampo
         ssize_t bytercv = recv(sd, &receivedMessage, SIZE_OF_MESSAGE_PROTOCOL, 0);
 
-        // Rimuovo linea di interfaccia tipo "nome-utente: ..."
+        // Rimuovo interfaccia del tipo "nome-utente: ..."
         clearInput();
 
-        // Messaggio inviato da un client
         if (bytercv <= 0) {
             printErrorStatus("lost connection with the server");
-            close(sd);
-            pthread_detach(pthread_self());
-
             return;
         }
 
-        else if (receivedMessage.typeMessage == MESSAGE_TYPE_SEND) {
+        else if (receivedMessage.typeMessage == MESSAGE_TYPE_SEND)
             printMessage(receivedMessage.sender, receivedMessage.message);
-        }
 
-        else if (receivedMessage.typeMessage == MESSAGE_TYPE_JOIN) {
+        else if (receivedMessage.typeMessage == MESSAGE_TYPE_JOIN)
             printUserJoin(receivedMessage.sender);
-        }
 
-       // Messaggio dal server: indica che c'è stato l'uscita di un client dal gruppo
-        else if (receivedMessage.typeMessage == MESSAGE_TYPE_LEAVE) {
+        else if (receivedMessage.typeMessage == MESSAGE_TYPE_LEAVE)
             printUserLeft(receivedMessage.sender);
-        }
 
+        // Ripristino interfaccia del tipo "nome-utente: ..."
         printSendingInterface(username);
         fflush(stdout);
     }

@@ -10,10 +10,9 @@ typedef enum {
     MESSAGE_TYPE_SEND,
 } messageType;
 
+
 typedef struct {
     messageType typeMessage;
     char sender[MAX_SENDER_NAME_LENGTH];
     char message[MAX_MESSAGE_LENGTH];
 } messageProtocol;
-
-
