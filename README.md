@@ -117,10 +117,12 @@ typedef struct {
 <br>
 
 <h4>Dimensione del messaggio</h4>
-Una cosa da prendere in considerazione è che <b>la <i> sizeof</i> di una struttura non è sempre uguale alla somma delle <i>sizeof</i> di ogni membro</b> di essa, questo perché la dimensione della struttura intera include anche le parti di <b>padding</b> aggiunte dal compilatore per allineare i dati in memoria.
+Una cosa da prendere in considerazione è che <b>la <i> sizeof</i> di una struttura non è sempre uguale alla somma delle <i>sizeof</i> di ogni membro</b> di essa, questo perché la dimensione della struttura intera include anche le parti di <b>padding</b> aggiunte dal compilatore per allineare i dati in memoria. 
+<br><br>
 
 Il risultato finale di queste valutazioni mi ha portato a scegliere come dimensione di un singolo messaggio 136byte, scelta che riduce al minimo lo spazio di padding inserito, permettendo 
 comunque la possibilità di trasmettere un numero di caratteri adeguato ad ogni campo. 
+
 
 <table>
   <thead>
